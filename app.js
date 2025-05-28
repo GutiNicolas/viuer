@@ -28,9 +28,12 @@ app.get('/view/:id', async (req, res) => {
   const detailUrl = renderUrl(detailUrlTemplate, {env: env})
 
   console.log(`Finding events for id ${id} in ${env}`)
-  console.log(`${metaUrl} ${detailUrl}`)
+  //console.log(`${metaUrl} ${detailUrl}`)
 
   try {
+    const caseAndTransactionIds = new Set();
+    caseAndTransactionIds.add(id)
+
     console.log('Requesting metas')
     const metaResponse = await axios.get(metaUrl, { params: { size: 150 } });
     const metas = metaResponse.data;
@@ -41,6 +44,10 @@ app.get('/view/:id', async (req, res) => {
     const responseMap = new Map();
 
     for (const meta of metas) {
+      if (meta.caseId) {
+        caseAndTransactionIds.add(meta.caseId)
+      }
+
       if (meta.requestId) {
         requestMap.set(meta.requestId, meta.id);
         responseMap.set(meta.id, meta.requestId);
@@ -78,7 +85,7 @@ app.get('/view/:id', async (req, res) => {
     const detailResponses = await Promise.all(
       batches.map(batch =>
         axios.post(detailUrl, {
-          caseIds: [id],
+          caseIds: Array.from(caseAndTransactionIds),
           eventIds: batch
         })
         )
@@ -321,7 +328,7 @@ app.get('/view/:id', async (req, res) => {
         }
       }
       window.copyJSON = copyJSON;
-      
+
       function renderEventList() {
         const eventArr = Object.values(eventMap)
         .sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
